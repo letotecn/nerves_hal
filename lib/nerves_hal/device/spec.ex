@@ -120,7 +120,7 @@ defmodule Nerves.HAL.Device.Spec do
   def handle_events(
         [{subsystem, :add, device}],
         _from,
-        %{subsystem: subsystem, status: :disconnected} = s
+        %{subsystem: subsystem, status: _status} = s
       ) do
     s =
       case s.mod.handle_discover(device, s.handler_state) do
