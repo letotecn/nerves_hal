@@ -212,7 +212,25 @@ defmodule Nerves.HAL.Device.Spec do
     {:ok, pid} = mod.start_link(opts)
     :ok = mod.connect(pid, device)
     handler_state = Map.put(s.handler_state, :adapter, pid)
+    connect_device_internal(device, handler_state, s)
+  end
 
+  def connect_device(device, %{adapter: {{_mod, _opts}, pid}} = s) do
+    handler_state = Map.put(s.handler_state, :adapter, pid)
+    connect_device_internal(device, handler_state, s)
+  end
+
+  def disconnect_device(_device, %{adapter: {{mod, opts}, pid}} = s) do
+    if Process.alive?(pid), do: mod.stop(pid)
+    %{s | status: :disconnected, device: nil, adapter: {{mod, opts}, nil}}
+  end
+
+  defp connect_device_internal(
+         device,
+         %{adapter: pid} = handler_state,
+         %{adapter: {{mod, opts}, _old_pid}} = s
+       )
+       when pid != nil do
     s =
       case s.mod.handle_connect(device, handler_state) do
         {:noreply, new_handler_state} ->
@@ -220,10 +238,5 @@ defmodule Nerves.HAL.Device.Spec do
       end
 
     %{s | status: :connected, device: device, adapter: {{mod, opts}, pid}}
-  end
-
-  def disconnect_device(_device, %{adapter: {{mod, opts}, pid}} = s) do
-    if Process.alive?(pid), do: mod.stop(pid)
-    %{s | status: :disconnected, device: nil, adapter: {{mod, opts}, nil}}
   end
 end
